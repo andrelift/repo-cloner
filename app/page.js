@@ -41,7 +41,13 @@ function Log({ r }) {
   </>);
 }
 
-const makeEdit = (path = '') => ({ path, mode: 'text', match: 'all', find: '', replace: '' });
+const makeEdit = ({ path = '', find = '', replace = '', mode = 'text', match = 'all' } = {}) => ({
+  path,
+  mode,
+  match,
+  find,
+  replace,
+});
 const cleanName = (s) => s.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
 
 export default function Home() {
@@ -57,7 +63,10 @@ export default function Home() {
   const [domains, setDomains] = useState([]);
   const [p2, setP2] = useState({ projectName: '', domain: '', subdomain: '' });
   const [paths, setPaths] = useState([]);
-  const [edits, setEdits] = useState([makeEdit('vercel.json'), makeEdit('views/layout')]);
+  const [edits, setEdits] = useState([
+    makeEdit({ path: 'vercel.json', find: 'example.php' }),
+    makeEdit({ path: 'views/layout.php', find: '<script> //example.com </script>' }),
+  ]);
   const [committed, setCommitted] = useState(null);
   const fileRef = useRef(null);
   const r1 = useRun(), r2 = useRun(), r3 = useRun();
@@ -204,7 +213,7 @@ export default function Home() {
           </div>
         ))}
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-          <button onClick={() => setEdits([...edits, makeEdit('')])}>+ Add another edit</button>
+          <button onClick={() => setEdits([...edits, makeEdit()])}>+ Add another edit</button>
           <button className="primary" disabled={busyAny} onClick={doEdit}>{r3.busy ? 'Working…' : 'Commit changes'}</button>
         </div>
         <Log r={r3} />
