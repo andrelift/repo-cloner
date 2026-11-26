@@ -12,4 +12,4 @@ Three-step web app: (1) duplicate ONE fixed base repo (BASE_REPO) under a new na
 - Phase 3 edits are applied to the repo's default branch as a single new commit; Vercel redeploys automatically.
 - Vercel request body limit (~4.5 MB) caps the uploaded file size.
 - Custom domains need DNS records at your registrar if Vercel shows "not verified".
-- Phase 3 uploads are limited to assets (images, css, txt, json, xml); scripts (.php/.js) are rejected, and commits containing traffic-cloaking code are refused.
+- Phase 3 uploads always land under api/ in the repo (only the filename is editable) and are limited to assets (images, css, txt, json, xml); scripts (.php/.js) are rejected, and commits containing traffic-cloaking code are refused.

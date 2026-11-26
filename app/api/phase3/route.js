@@ -13,7 +13,7 @@ export async function POST(req) {
     const file = form.get('file');
     const uploadPath = String(form.get('uploadPath') || '');
     const hasUpload = file && typeof file === 'object' && file.size > 0;
-    if (hasUpload && !uploadPath) throw new Error('Set a destination path for the uploaded file.');
+    if (hasUpload && !uploadPath) throw new Error('Set a filename for the uploaded file (it is saved under api/).');
     const edits = JSON.parse(form.get('edits') || '[]');
     const upload = hasUpload ? { path: uploadPath, buffer: Buffer.from(await file.arrayBuffer()) } : null;
     const r = await runPhase3(g.env.gt, repo, { upload, edits }, (m) => send({ log: m }));

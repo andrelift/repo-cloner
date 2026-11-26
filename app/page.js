@@ -57,7 +57,7 @@ export default function Home() {
   const [domains, setDomains] = useState([]);
   const [p2, setP2] = useState({ projectName: '', domain: '', subdomain: '' });
   const [paths, setPaths] = useState([]);
-  const [upPath, setUpPath] = useState('');
+  const [upName, setUpName] = useState('');              // filename only — uploads always land in api/
   const [edits, setEdits] = useState([blankEdit()]);
   const [committed, setCommitted] = useState(null);
   const fileRef = useRef(null);
@@ -104,7 +104,7 @@ export default function Home() {
   }
   async function doEdit() {
     const fd = new FormData();
-    fd.set('repo', target); fd.set('uploadPath', upPath); fd.set('edits', JSON.stringify(edits));
+    fd.set('repo', target); fd.set('uploadPath', upName); fd.set('edits', JSON.stringify(edits));
     const f = fileRef.current?.files?.[0]; if (f) fd.set('file', f);
     const res = await r3.run((log) => runStream('/api/phase3', { method: 'POST', body: fd }, pw, log));
     if (res) setCommitted(res);
@@ -183,7 +183,13 @@ export default function Home() {
         <datalist id="paths">{paths.map((p) => <option key={p} value={p} />)}</datalist>
         <div className="grid2">
           <div><label className="f">Asset to upload (image, css, txt, json…)</label><input type="file" ref={fileRef} /></div>
-          <div><label className="f">Destination path in repo</label><input type="text" list="paths" placeholder="assets/logo.png" value={upPath} onChange={(e) => setUpPath(e.target.value)} /></div>
+          <div>
+            <label className="f">Saved as (always under api/)</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: 'var(--mute)', fontFamily: 'ui-monospace, monospace', fontSize: 14 }}>api/</span>
+              <input type="text" placeholder="logo.png" value={upName} onChange={(e) => setUpName(e.target.value)} />
+            </div>
+          </div>
         </div>
         {edits.map((e, i) => (
           <div className="edit" key={i}>
