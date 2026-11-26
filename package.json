@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "next dev", "build": "next build", "start": "next start", "test": "node --test lib/edits.test.js lib/phase3.test.js" },
+  "scripts": { "dev": "next dev", "build": "next build", "start": "next start", "test": "node --test lib/guard.test.js" },
   "dependencies": {
     "next": "^15.0.0",
     "react": "^19.0.0",
