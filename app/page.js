@@ -41,7 +41,7 @@ function Log({ r }) {
   </>);
 }
 
-const blankEdit = () => ({ path: '', mode: 'text', find: '', replace: '' });
+const blankEdit = () => ({ path: '', mode: 'text', match: 'all', find: '', replace: '' });
 const cleanName = (s) => s.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
 
 export default function Home() {
@@ -57,7 +57,6 @@ export default function Home() {
   const [domains, setDomains] = useState([]);
   const [p2, setP2] = useState({ projectName: '', domain: '', subdomain: '' });
   const [paths, setPaths] = useState([]);
-  const [upName, setUpName] = useState('');              // filename only — uploads always land in api/
   const [edits, setEdits] = useState([blankEdit()]);
   const [committed, setCommitted] = useState(null);
   const fileRef = useRef(null);
@@ -104,7 +103,7 @@ export default function Home() {
   }
   async function doEdit() {
     const fd = new FormData();
-    fd.set('repo', target); fd.set('uploadPath', upName); fd.set('edits', JSON.stringify(edits));
+    fd.set('repo', target); fd.set('edits', JSON.stringify(edits));
     const f = fileRef.current?.files?.[0]; if (f) fd.set('file', f);
     const res = await r3.run((log) => runStream('/api/phase3', { method: 'POST', body: fd }, pw, log));
     if (res) setCommitted(res);
@@ -182,13 +181,11 @@ export default function Home() {
         <p className="sub">Changes go into one commit on <b>{target || 'the new repo'}</b>; Vercel redeploys the production domain by itself.</p>
         <datalist id="paths">{paths.map((p) => <option key={p} value={p} />)}</datalist>
         <div className="grid2">
-          <div><label className="f">Asset to upload (image, css, txt, json…)</label><input type="file" ref={fileRef} /></div>
+          <div><label className="f">File to upload (images, CSS, TXT, JSON, XML, PHP…)</label><input type="file" ref={fileRef} /></div>
           <div>
-            <label className="f">Saved as (always under api/)</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: 'var(--mute)', fontFamily: 'ui-monospace, monospace', fontSize: 14 }}>api/</span>
-              <input type="text" placeholder="logo.png" value={upName} onChange={(e) => setUpName(e.target.value)} />
-            </div>
+            <label className="f">Upload destination</label>
+            <div className="target">api/ — fixed destination</div>
+            <p className="sub" style={{ marginTop: 5 }}>The uploaded file keeps its original filename and is saved directly inside the repository's api/ folder.</p>
           </div>
         </div>
         {edits.map((e, i) => (
@@ -197,11 +194,11 @@ export default function Home() {
               <div><label className="f">File to edit</label><input type="text" list="paths" value={e.path} onChange={(x) => setEdit(i, 'path', x.target.value)} placeholder="config.php" /></div>
               <div><label className="f">Mode</label>
                 <select value={e.mode} onChange={(x) => setEdit(i, 'mode', x.target.value)}>
-                  <option value="text">Text: replace every match</option>
+                  <option value="text">Text: literal find &amp; replace</option>
                   <option value="json">JSON: set a key (a.b.c)</option>
-                </select></div>
-              <div><label className="f">{e.mode === 'json' ? 'Key path' : 'Find (the old line / text)'}</label><input type="text" value={e.find} onChange={(x) => setEdit(i, 'find', x.target.value)} /></div>
-              <div><label className="f">{e.mode === 'json' ? 'New value' : 'Replace with'}</label><input type="text" value={e.replace} onChange={(x) => setEdit(i, 'replace', x.target.value)} /></div>
+                </select>{e.mode === 'text' && <select style={{ marginTop: 7 }} value={e.match || 'all'} onChange={(x) => setEdit(i, 'match', x.target.value)}><option value="all">Replace every match</option><option value="first">Replace first match only</option></select>}</div>
+              <div><label className="f">{e.mode === 'json' ? 'Key path' : 'Find (text or multiline code)'}</label>{e.mode === 'json' ? <input type="text" value={e.find} onChange={(x) => setEdit(i, 'find', x.target.value)} /> : <textarea rows={5} value={e.find} onChange={(x) => setEdit(i, 'find', x.target.value)} placeholder="Paste the complete original code, including line breaks" />}</div>
+              <div><label className="f">{e.mode === 'json' ? 'New value' : 'Replace with'}</label>{e.mode === 'json' ? <input type="text" value={e.replace} onChange={(x) => setEdit(i, 'replace', x.target.value)} /> : <textarea rows={5} value={e.replace} onChange={(x) => setEdit(i, 'replace', x.target.value)} placeholder="Paste the replacement code" />}</div>
             </div>
             {edits.length > 1 && <button style={{ marginTop: 8 }} onClick={() => setEdits(edits.filter((_, j) => j !== i))}>Remove</button>}
           </div>
