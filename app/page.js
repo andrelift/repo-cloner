@@ -70,12 +70,14 @@ export default function Home() {
       if (res.status === 401) { setAuthed(false); setLoginErr('Wrong password.'); return false; }
       if (!res.ok) throw new Error(await res.text());
       setData(await res.json()); setLive(true); setUpdated(new Date()); return true;
-    } catch (e) { setLive(false); return false; }
+    } catch (e) { setLive(false); return String(e.message || e); }
   }, [pw]);
 
   async function login(ev) {
     ev.preventDefault(); setLoginErr('');
-    if (await refresh(pw)) {
+    const ok = await refresh(pw);
+    if (ok !== true) { setLoginErr(typeof ok === 'string' ? `Password OK? Server error: ${ok}` : 'Wrong password.'); return; }
+    {
       setAuthed(true);
       fetch('/api/domains', { headers: { 'x-app-password': pw } }).then((r) => r.ok ? r.json() : { domains: [] }).then((d) => setDomains(d.domains)).catch(() => {});
     }

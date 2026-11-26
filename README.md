@@ -4,7 +4,7 @@
 
 ## Deploy
 1. Push this folder to GitHub and import it in Vercel (Next.js).
-2. Env vars (see `.env.example`): GITHUB_TOKEN, VERCEL_TOKEN, APP_PASSWORD; optional VERCEL_TEAM_ID, GITHUB_OWNER.
+2. Env vars (see `.env.example`): GITHUB_TOKEN, VC_API_TOKEN, APP_PASSWORD; optional VERCEL_TEAM_ID, GITHUB_OWNER.
 3. Install the Vercel GitHub integration on the GitHub account that owns the copies.
 
 ## Notes
