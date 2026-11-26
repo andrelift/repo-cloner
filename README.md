@@ -1,6 +1,6 @@
 # Repo Cloner
 
-Two-step web app: (1) duplicate ONE fixed base repo (BASE_REPO) under a new name, (2) create the Vercel project, attach a domain/subdomain and deploy. The base repo must be a clean template; the app refuses to copy repos that contain traffic-cloaking scripts. The header shows a live count of your GitHub repos (refreshes every 8 s).
+Three-step web app: (1) duplicate ONE fixed base repo (BASE_REPO) under a new name, (2) create the Vercel project, attach a domain/subdomain, deploy and show the production URL, (3) edit files in the new repo (find/replace, JSON keys, asset uploads) in one commit; Vercel redeploys. The base repo must be a clean template; the app refuses to copy repos that contain traffic-cloaking scripts. The header shows a live count of your GitHub repos (refreshes every 8 s).
 
 ## Deploy
 1. Push this folder to GitHub and import it in Vercel (Next.js).
@@ -12,3 +12,4 @@ Two-step web app: (1) duplicate ONE fixed base repo (BASE_REPO) under a new name
 - Phase 3 edits are applied to the repo's default branch as a single new commit; Vercel redeploys automatically.
 - Vercel request body limit (~4.5 MB) caps the uploaded file size.
 - Custom domains need DNS records at your registrar if Vercel shows "not verified".
+- Phase 3 uploads are limited to assets (images, css, txt, json, xml); scripts (.php/.js) are rejected, and commits containing traffic-cloaking code are refused.

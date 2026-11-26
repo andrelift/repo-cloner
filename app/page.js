@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Runs a streaming (NDJSON) endpoint. Returns the last `result` event; throws on `error`.
 async function runStream(url, init, pw, onLog) {
@@ -41,6 +41,7 @@ function Log({ r }) {
   </>);
 }
 
+const blankEdit = () => ({ path: '', mode: 'text', find: '', replace: '' });
 const cleanName = (s) => s.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
 
 export default function Home() {
@@ -55,7 +56,12 @@ export default function Home() {
   const [dup, setDup] = useState(null);                 // {name, private} while the modal is open
   const [domains, setDomains] = useState([]);
   const [p2, setP2] = useState({ projectName: '', domain: '', subdomain: '' });
-  const r1 = useRun(), r2 = useRun();
+  const [paths, setPaths] = useState([]);
+  const [upPath, setUpPath] = useState('');
+  const [edits, setEdits] = useState([blankEdit()]);
+  const [committed, setCommitted] = useState(null);
+  const fileRef = useRef(null);
+  const r1 = useRun(), r2 = useRun(), r3 = useRun();
 
   const refresh = useCallback(async (password) => {
     try {
@@ -80,16 +86,30 @@ export default function Home() {
     return () => clearInterval(t);
   }, [authed, refresh, pw]);
 
+  useEffect(() => {
+    if (!site || !target) { setPaths([]); return; }
+    fetch(`/api/tree?repo=${encodeURIComponent(target)}`, { headers: { 'x-app-password': pw } })
+      .then((r) => r.ok ? r.json() : { paths: [] }).then((d) => setPaths(d.paths)).catch(() => setPaths([]));
+  }, [site, target, pw]);
+
   async function doDuplicate() {
     const body = { name: dup.name, private: dup.private };
     setDup(null);
     const res = await r1.run((log) => runStream('/api/phase1', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, pw, log));
-    if (res) { setTarget(res.repo); setSite(null); setP2((p) => ({ ...p, projectName: res.repo.split('/')[1] })); refresh(pw); }
+    if (res) { setTarget(res.repo); setSite(null); setCommitted(null); setP2((p) => ({ ...p, projectName: res.repo.split('/')[1] })); refresh(pw); }
   }
   async function doVercel() {
     const res = await r2.run((log) => runStream('/api/phase2', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repo: target, ...p2 }) }, pw, log));
     if (res) setSite(res);
   }
+  async function doEdit() {
+    const fd = new FormData();
+    fd.set('repo', target); fd.set('uploadPath', upPath); fd.set('edits', JSON.stringify(edits));
+    const f = fileRef.current?.files?.[0]; if (f) fd.set('file', f);
+    const res = await r3.run((log) => runStream('/api/phase3', { method: 'POST', body: fd }, pw, log));
+    if (res) setCommitted(res);
+  }
+  const setEdit = (i, k, v) => setEdits(edits.map((e, j) => (j === i ? { ...e, [k]: v } : e)));
 
   if (!authed) {
     return (
@@ -104,7 +124,7 @@ export default function Home() {
     );
   }
 
-  const busyAny = r1.busy || r2.busy;
+  const busyAny = r1.busy || r2.busy || r3.busy;
   const host = (p2.subdomain ? cleanName(p2.subdomain) + '.' : '') + p2.domain;
 
   return (
@@ -120,6 +140,7 @@ export default function Home() {
       <div className="steps">
         <div className={'step ' + (target ? 'done' : 'active')}>{target ? '✓ ' : '1. '}Duplicate the base repo</div>
         <div className={'step ' + (site ? 'done' : target ? 'active' : '')}>{site ? '✓ ' : '2. '}Build on Vercel</div>
+        <div className={'step ' + (committed ? 'done' : site ? 'active' : '')}>{committed ? '✓ ' : '3. '}Edit files</div>
       </div>
 
       <section className="card">
@@ -153,7 +174,38 @@ export default function Home() {
         {p2.domain && <p className="sub" style={{ marginTop: 8 }}>Will serve: <b>{host}</b></p>}
         <button className="primary" style={{ marginTop: 12 }} disabled={busyAny || !p2.projectName} onClick={doVercel}>{r2.busy ? 'Working…' : 'Build on Vercel'}</button>
         <Log r={r2} />
-        {site && <p className="okmsg">Live: <a href={site.url} target="_blank" rel="noreferrer">{site.url}</a>{site.url !== site.vercelUrl && <> · <a href={site.vercelUrl} target="_blank" rel="noreferrer">vercel URL</a></>}</p>}
+        {site && <p className="okmsg">Production: <a href={site.url} target="_blank" rel="noreferrer">{site.url}</a></p>}
+      </section>
+
+      <section className={'card' + (site ? '' : ' locked')}>
+        <h2>3. Edit files</h2>
+        <p className="sub">Changes go into one commit on <b>{target || 'the new repo'}</b>; Vercel redeploys the production domain by itself.</p>
+        <datalist id="paths">{paths.map((p) => <option key={p} value={p} />)}</datalist>
+        <div className="grid2">
+          <div><label className="f">Asset to upload (image, css, txt, json…)</label><input type="file" ref={fileRef} /></div>
+          <div><label className="f">Destination path in repo</label><input type="text" list="paths" placeholder="assets/logo.png" value={upPath} onChange={(e) => setUpPath(e.target.value)} /></div>
+        </div>
+        {edits.map((e, i) => (
+          <div className="edit" key={i}>
+            <div className="grid2">
+              <div><label className="f">File to edit</label><input type="text" list="paths" value={e.path} onChange={(x) => setEdit(i, 'path', x.target.value)} placeholder="config.php" /></div>
+              <div><label className="f">Mode</label>
+                <select value={e.mode} onChange={(x) => setEdit(i, 'mode', x.target.value)}>
+                  <option value="text">Text: replace every match</option>
+                  <option value="json">JSON: set a key (a.b.c)</option>
+                </select></div>
+              <div><label className="f">{e.mode === 'json' ? 'Key path' : 'Find (the old line / text)'}</label><input type="text" value={e.find} onChange={(x) => setEdit(i, 'find', x.target.value)} /></div>
+              <div><label className="f">{e.mode === 'json' ? 'New value' : 'Replace with'}</label><input type="text" value={e.replace} onChange={(x) => setEdit(i, 'replace', x.target.value)} /></div>
+            </div>
+            {edits.length > 1 && <button style={{ marginTop: 8 }} onClick={() => setEdits(edits.filter((_, j) => j !== i))}>Remove</button>}
+          </div>
+        ))}
+        <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+          <button onClick={() => setEdits([...edits, blankEdit()])}>+ Add another edit</button>
+          <button className="primary" disabled={busyAny} onClick={doEdit}>{r3.busy ? 'Working…' : 'Commit changes'}</button>
+        </div>
+        <Log r={r3} />
+        {committed && <p className="okmsg">Committed. Redeploying <a href={site?.url} target="_blank" rel="noreferrer">{site?.url}</a> — <a href={committed.url} target="_blank" rel="noreferrer">view commit</a>.</p>}
       </section>
 
       {dup && (
