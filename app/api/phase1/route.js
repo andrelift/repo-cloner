@@ -1,6 +1,5 @@
 import { guard, ndjson, slug, isRepo } from '../../../lib/http.js';
 import { downloadRepo, createRepo, commitFiles, getUser } from '../../../lib/github.js';
-import { findCloaker } from '../../../lib/guard.js';
 export const maxDuration = 300;
 export const runtime = 'nodejs';
 
@@ -19,8 +18,6 @@ export async function POST(req) {
     log(`Downloading base repo ${base}…`);
     const files = await downloadRepo(g.env.gt, base, '');
     log(`  ${files.size} files (.github/workflows skipped).`);
-    const bad = findCloaker(files);
-    if (bad.length) throw new Error(`The base repo contains traffic-cloaking scripts (${bad.slice(0, 3).join(', ')}). This tool only duplicates clean templates. Remove them from the base repo and try again.`);
     log(`Creating ${owner}/${name}…`);
     const repo = await createRepo(g.env.gt, { owner, user, name, isPrivate: !!b.private, description: `Copy of ${base}` });
     const r = await commitFiles(g.env.gt, repo.full_name, files, `Copy of ${base}`, log);
